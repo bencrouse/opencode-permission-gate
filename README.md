@@ -133,7 +133,8 @@ select a model and timeouts suited to your machine.
    ```
 
    For a project-local copy, place the plugin in an immediate subdirectory of
-   `.opencode/plugins/` with its `package.json` and dependency installation.
+   `.opencode/plugins/` with its `index.ts`, source, `package.json`, and dependency
+   installation. The `index.ts` entrypoint supports local directory discovery.
 
 5. Run `opencode reload`. If the running server still reports old plugin exports,
    run `opencode service restart` to clear its imported-module cache.

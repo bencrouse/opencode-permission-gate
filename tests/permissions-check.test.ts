@@ -8,7 +8,7 @@ process.env.OPENCODE_PERMISSION_GATE_LOG_PATH = join(
   tmpdir(),
   `permission-gate-test-${process.pid}.log`,
 )
-const { default: permissionGate } = await import("../permissions-check.ts")
+const { default: permissionGate } = await import("../index.ts")
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })
 

@@ -9,5 +9,5 @@
     "target": "ES2022",
     "types": ["node"]
   },
-  "include": ["permissions-check.ts", "tests/**/*.ts"]
+  "include": ["index.ts", "permissions-check.ts", "tests/**/*.ts"]
 }
