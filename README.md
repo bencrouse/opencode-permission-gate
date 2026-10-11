@@ -37,6 +37,10 @@ That's the part the local model classifies.
 
 ## How it works
 
+This version targets **OpenCode 2.0.26 or newer**. It uses the V2 permission
+evaluation hook, not the V1 permission-event/reply workaround. V1 users should
+keep the implementation at commit `2da3f04a614a805611241b0c92aac7455ed176a2`.
+
 This plugin keeps a small record of the current user intent:
 * The task
 * Specified constraints like "don't push"
@@ -44,6 +48,12 @@ This plugin keeps a small record of the current user intent:
 * Recent turns
 
 When OpenCode asks for permission, the plugin sends that context and the pending action to a local model.
+
+Intent records persist in OpenCode's plugin storage across reloads and compaction.
+When resuming a session without a stored record, only actual user messages seed
+the record; synthetic messages and summaries are not treated as user authority.
+Full tool arguments distinguish cached approvals, new prompts invalidate the
+cache, and a newer prompt invalidates any classifier result still in flight.
 
 The inputs are separate into three channels:
 * Trusted user intent
@@ -84,15 +94,64 @@ OPENCODE_PERMISSION_GATE_ENDPOINT=http://127.0.0.1:1234/v1/chat/completions
 OPENCODE_PERMISSION_GATE_MODEL=gemma-4-26b-a4b-it-qat-mlx
 OPENCODE_PERMISSION_GATE_CLASSIFY_TIMEOUT_MS=5000
 OPENCODE_PERMISSION_GATE_EXTRACT_TIMEOUT_MS=5000
-OPENCODE_PERMISSION_GATE_LOG_PATH="$HOME~/.config/opencode/auditor.log"
+OPENCODE_PERMISSION_GATE_LOG_PATH="$HOME/.config/opencode/auditor.log"
 ```
+
+You can also pass `endpoint`, `model`, `classifyTimeoutMs`, `extractTimeoutMs`,
+and `logPath` as plugin options. Environment variables override plugin options.
+Defaults remain Gemma with 5-second extraction and classification timeouts;
+select a model and timeouts suited to your machine.
 
 ## Installation
 1. Run a compatible local model server like [LM studio](https://lmstudio.ai).
 2. Configure the endpoint and model
-3. Add `permissions-check.ts` to your OpenCode plugin setup.
-4. Start OpenCode
-5. Review the audit log while testing it for your workflows, start somewhere a mistake would be annoying, not dangerous.
+3. Clone this repository and install its declared dependencies:
+
+   ```sh
+   git clone https://github.com/bencrouse/opencode-permission-gate.git
+   cd opencode-permission-gate
+   npm ci
+   ```
+
+4. Configure the cloned **directory**, not the individual file, in your global
+   or project `opencode.jsonc`. Replace the example path with your checkout:
+
+   ```jsonc
+    {
+      "$schema": "https://opencode.ai/config.json",
+      "plugins": [
+       {
+         "package": "/absolute/path/to/opencode-permission-gate",
+         "options": {
+           "model": "qwen3.6-35b-a3b",
+           "classifyTimeoutMs": 30000,
+           "extractTimeoutMs": 30000
+         }
+       }
+     ]
+   }
+   ```
+
+   For a project-local copy, place the plugin in an immediate subdirectory of
+   `.opencode/plugins/` with its `package.json` and dependency installation.
+
+5. Run `opencode reload`. If the running server still reports old plugin exports,
+   run `opencode service restart` to clear its imported-module cache.
+6. Review the audit log while testing it for your workflows, start somewhere a mistake would be annoying, not dangerous.
+
+## Development
+
+Requires Node.js 24 or newer and npm.
+
+```sh
+npm ci
+npm run check
+```
+
+Tests cover allow-only decisions, classifier failures, argument-sensitive
+caching, circuit-breaker recovery, stale in-flight verdicts, durable intent,
+plugin cleanup, and configuration precedence. They do not measure the safety
+or accuracy of a real classifier model.
 
 ## Security posture
 
